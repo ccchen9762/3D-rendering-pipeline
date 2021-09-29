@@ -1,16 +1,6 @@
-#include<iostream>
-#include<vector>
-#include<string>
-#include<fstream>
-#include<GL/glut.h>
+#include "Primitive.h"
 
-using std::cout;
-using std::cin;
-using std::getline;
-using std::endl;
-using std::vector;
-using std::string;
-using std::ifstream;
+const float PI = 3.1415926f / 180.0f;
 
 ifstream file;
 
@@ -36,6 +26,7 @@ void keyboard(unsigned char key, int x, int y) {
 }
 
 int main(int argc, char* argv[]) {
+	//open file
 	string fileName = argv[1];
 	file.open(fileName);
 	if (file.is_open())
@@ -44,14 +35,16 @@ int main(int argc, char* argv[]) {
 		cout << "file does not exist" << endl;
 		exit(0);
 	}
-	//==================== read window width & height ====================
+
+	// read window width & height 
 	string command = "";
 	int split = 0;
 	getline(file, command);
 	windowWidth = stoi(command.substr(split, command.find(" ", split)));
 	split = command.find(" ") + 1;
 	windowHeight = stoi(command.substr(split, command.find(" ", split)));
-	//========================= settings =========================
+
+	//
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
 	glutInitWindowSize(windowWidth, windowHeight);
