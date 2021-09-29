@@ -17,3 +17,20 @@ vector<vector<float>> matrixMultiplication(vector<vector<float>>& matrixA, vecto
 
 	return resultMatrix;
 }
+
+vector<float> readNumbers(string command, int now) {
+	vector<float> nums;
+	nums.reserve(10);
+	while (now<command.size()) {
+		int pos = command.find(" ", now+1);
+		if (pos == std::string::npos) {
+			nums.push_back(stof(command.substr(now)));
+			break;
+		}
+		else {
+			nums.push_back(stof(command.substr(now, pos)));
+			now = pos+1;
+		}
+	}
+	return nums;
+}

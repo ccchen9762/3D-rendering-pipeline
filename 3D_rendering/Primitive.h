@@ -34,13 +34,15 @@ class Light {
 	Color color;
 
 public:
-	Light(const float x, const float y, const float z, const Color& c);
+	Light(const float r, const float g, const float b, const float x, const float y, const float z);
 	void setXVal(const float x) { xVal = x; }
 	void setYVal(const float y) { yVal = y; }
 	void setZVal(const float z) { zVal = z; }
+	void setColor(const Color& c) { color = c; }
 	float getXVal() { return xVal; }
 	float getYVal() { return yVal; }
 	float getZVal() { return zVal; }
+	Color getColor() { return color; }
 };
 
 class Point {
@@ -49,13 +51,16 @@ private:
 	Color color;
 
 public:
-	Point(const float x, const float y, const float z, const Color& c);
+	Point(const float x, const float y, const float z);
+	Point(const float r, const float g, const float b, const float x, const float y, const float z);
 	void setXVal(const float x) { xVal = x; }
 	void setYVal(const float y) { yVal = y; }
 	void setZVal(const float z) { zVal = z; }
+	void setColor(const Color& c) { color = c; }
 	float getXVal() { return xVal; }
 	float getYVal() { return yVal; }
 	float getZVal() { return zVal; }
+	Color getColor() { return color; }
 };
 
 class SpaceVector {
@@ -70,6 +75,8 @@ public:
 	float getXVal() { return xVal; }
 	float getYVal() { return yVal; }
 	float getZVal() { return zVal; }
+
+	void normalization();
 };
 
 class Line {
