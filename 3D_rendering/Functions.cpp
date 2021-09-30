@@ -6,6 +6,8 @@ vector<float> readNumbers(const string& command, int now) {
 	while (now<command.size()) {
 		while (now < command.size() && (!isdigit(command[now]) && command[now] != '.' && command[now] != '-'))
 			now++;
+		if (now == command.size())
+			break;
 		int pos = command.find(" ", now);
 		if (pos == std::string::npos) {
 			nums.push_back(stof(command.substr(now)));

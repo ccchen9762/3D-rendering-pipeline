@@ -8,6 +8,15 @@ Color::Color(const float r, const float g, const float b) {
 	red = r, green = g, blue = b;
 }
 
+void Point::colorThreshold() {
+	if (color.getRed() > 1.0f)
+		color.setRed(1.0f);
+	if (color.getGreen() > 1.0f)
+		color.setGreen(1.0f);
+	if (color.getBlue() > 1.0f)
+		color.setBlue(1.0f);
+}
+
 Light::Light(const float r, const float g, const float b, const float x, const float y, const float z) : color(r, g, b) {
 	xVal = x, yVal = y, zVal = z;
 }
@@ -49,7 +58,8 @@ void Line::drawLine(vector<Point>& drawList) {
 			swap(yStart, yEnd);
 			swap(depthStart, depthEnd);
 		}
-		for (float plotY = yStart; plotY <= yEnd; plotY++)
+		//for (float plotY = yStart; plotY <= yEnd; plotY++)
+		for (int plotY = round(yStart); plotY <= round(yEnd); plotY++)
 			drawList.push_back(Point(xStart,
 									 plotY,
 									 0.0f,
@@ -84,8 +94,10 @@ void Line::drawLine(vector<Point>& drawList) {
 		float constA = yEnd - yStart;
 		float constB = xStart - xEnd;
 		float dVal = 2 * constA + constB;
-		float plotY = yStart;
-		for (float plotX = xStart; plotX <= xEnd; plotX++) {
+		//float plotY = yStart;
+		//for (float plotX = xStart; plotX <= xEnd; plotX++) {
+		int plotY = round(yStart);
+		for (int plotX = round(xStart); plotX <= round(xEnd); plotX++) {
 			if (dVal <= 0)
 				dVal += 2 * constA;
 			else {
@@ -110,21 +122,6 @@ void Line::drawLine(vector<Point>& drawList) {
 			}
 		}
 	}
-	
-	//draw start & end points
-	/* addingLine.x1 = roundf(addingLine.x1);
-	addingLine.y1 = roundf(addingLine.y1);
-	addingLine.x2 = roundf(addingLine.x2);
-	addingLine.y2 = roundf(addingLine.y2);
-	addingPoint.x = addingLine.x1;
-	addingPoint.y = addingLine.y1;
-	addingPoint.depth = pointDepth1;
-	coloringPlanes.push_back(addingPoint);
-	addingPoint.x = addingLine.x2;
-	addingPoint.y = addingLine.y2;
-	addingPoint.depth = pointDepth2;
-	coloringPlanes.push_back(addingPoint);*/
-	//draw line
 }
 
 ASC::ASC(const float r, const float g, const float b, const float kd, const float ks, const float n) : color(r, g, b) {

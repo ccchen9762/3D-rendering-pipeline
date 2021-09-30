@@ -1,10 +1,11 @@
 #pragma once
 
 #include<iostream>
+#include<fstream>
 #include<vector>
 #include<string>
-#include<fstream>
 #include<cmath>
+#include<algorithm>
 #include<GL/glut.h>
 
 using std::cin;
@@ -69,6 +70,8 @@ public:
 	float getZVal() { return zVal; }
 	double getDepth() { return depth; }
 	Color getColor() { return color; }
+
+	void colorThreshold();
 };
 
 class SpaceVector {
@@ -150,10 +153,10 @@ public:
 	float getKsVal() { return ksVal; }
 	float getNVal() { return nVal; }
 	Color getColor() { return color; }
-	vector<vector<float>> getMatrix() { return ascMatrix; }
-	vector<Point> getVertices() { return ascVertices; }
-	vector<vector<int>> getSurfaces() { return ascSurfaces; }
-	vector<vector<float>> getWorldMatrix() { return worldMatrix; }
+	const vector<vector<float>>& getMatrix() { return ascMatrix; }
+	const vector<Point>& getVertices() { return ascVertices; }
+	const vector<vector<int>>& getSurfaces() { return ascSurfaces; }
+	const vector<vector<float>>& getWorldMatrix() { return worldMatrix; }
 
 	void addVertices(const Point& p);
 	void addSurface(const vector<int>& vertices);
