@@ -13,11 +13,15 @@ Light::Light(const float r, const float g, const float b, const float x, const f
 }
 
 Point::Point(const float x, const float y, const float z) : color() {
-	xVal = x, yVal = y, zVal = z;
+	xVal = x, yVal = y, zVal = z, depth=0;
+}
+
+Point::Point(const float x, const float y, const float z, const double d) : color() {
+	xVal = x, yVal = y, zVal = z, depth = d;
 }
 
 Point::Point(const float r, const float g, const float b, const float x, const float y, const float z) : color(r, g, b) {
-	xVal = x, yVal = y, zVal = z;
+	xVal = x, yVal = y, zVal = z, depth=0;
 }
 
 SpaceVector::SpaceVector(const float x, const float y, const float z) {
@@ -31,16 +35,96 @@ void SpaceVector::normalization() {
 	zVal /= scalar;
 }
 
-Line::Line(const float x1, const float y1, const float x2, const float y2) {
-	xStart = x1, yStart = y1, xEnd = x2, yEnd = y2, slope = 0, vertical = false;
+Line::Line(const float x1, const float y1, const double d1, const float x2, const float y2, const double d2) {
+	xStart = x1, yStart = y1, depthStart=d1, xEnd = x2, yEnd = y2, depthEnd=d2, slope = 0, vertical = false;
 	if (xStart == xEnd)
 		vertical = true;
 	else
 		slope = (yEnd - yStart) / (xEnd - xStart);
 }
 
-void Line::drawLine(vector<Point>& pointList) {
+void Line::drawLine(vector<Point>& drawList) {
+	if (vertical) {
+		if (yStart > yEnd) {
+			swap(yStart, yEnd);
+			swap(depthStart, depthEnd);
+		}
+		for (float plotY = yStart; plotY <= yEnd; plotY++)
+			drawList.push_back(Point(xStart,
+									 plotY,
+									 0.0f,
+									 (depthEnd - depthStart) * (static_cast<double>(plotY) - static_cast<double>(yStart)) / (static_cast<double>(yEnd) - static_cast<double>(yStart)) + depthStart));
+	}
+	else {
+		int slopeState = 0;
+		if (slope >= -1 && slope < 0) {
+			xStart *= -1;
+			xEnd *= -1;
+			slopeState = 1;
+		}
+		else if (slope > 1) {
+			swap(xStart, yStart);
+			swap(xEnd, yEnd);
+			slopeState = 2;
+		}
+		else if (slope < -1) {
+			xStart *= -1;
+			xEnd *= -1;
+			swap(xStart, yStart);
+			swap(xEnd, yEnd);
+			slopeState = 3;
+		}
 
+		if (xStart > xEnd) {
+			swap(xStart, xEnd);
+			swap(yStart, yEnd);
+			swap(depthStart, depthEnd);
+		}
+
+		float constA = yEnd - yStart;
+		float constB = xStart - xEnd;
+		float dVal = 2 * constA + constB;
+		float plotY = yStart;
+		for (float plotX = xStart; plotX <= xEnd; plotX++) {
+			if (dVal <= 0)
+				dVal += 2 * constA;
+			else {
+				plotY += 1;
+				dVal += 2 * (constA + constB);
+			}
+			//draw the line based on input slope
+			double coeff = (static_cast<double>(plotX) - static_cast<double>(xStart)) / (static_cast<double>(xEnd) - static_cast<double>(xStart));
+			switch (slopeState) {
+			case 0:
+				drawList.push_back(Point(plotX, plotY, 0.0f, (depthEnd - depthStart) * coeff + depthStart));
+				break;
+			case 1:
+				drawList.push_back(Point(plotX * (-1), plotY, 0.0f, (depthEnd - depthStart) * coeff + depthStart));
+				break;
+			case 2:
+				drawList.push_back(Point(plotY, plotX, 0.0f, (depthEnd - depthStart) * coeff + depthStart));
+				break;
+			case 3:
+				drawList.push_back(Point(plotY * (-1), plotX, 0.0f, (depthEnd - depthStart) * coeff + depthStart));
+				break;
+			}
+		}
+	}
+	
+	//draw start & end points
+	/* addingLine.x1 = roundf(addingLine.x1);
+	addingLine.y1 = roundf(addingLine.y1);
+	addingLine.x2 = roundf(addingLine.x2);
+	addingLine.y2 = roundf(addingLine.y2);
+	addingPoint.x = addingLine.x1;
+	addingPoint.y = addingLine.y1;
+	addingPoint.depth = pointDepth1;
+	coloringPlanes.push_back(addingPoint);
+	addingPoint.x = addingLine.x2;
+	addingPoint.y = addingLine.y2;
+	addingPoint.depth = pointDepth2;
+	coloringPlanes.push_back(addingPoint);*/
+	//draw line
 }
 
 ASC::ASC(const float r, const float g, const float b, const float kd, const float ks, const float n) : color(r, g, b) {

@@ -11,6 +11,7 @@ using std::cin;
 using std::cout;
 using std::getline;
 using std::endl;
+using std::swap;
 using std::vector;
 using std::string;
 using std::ifstream;
@@ -24,6 +25,7 @@ public:
 	void setRed(const float r) { red = r; }
 	void setGreen(const float g) { green = g; }
 	void setBlue(const float b) { blue = b; }
+
 	float getRed() { return red; }
 	float getGreen() { return green; }
 	float getBlue() { return blue; }
@@ -39,6 +41,7 @@ public:
 	void setYVal(const float y) { yVal = y; }
 	void setZVal(const float z) { zVal = z; }
 	void setColor(const Color& c) { color = c; }
+
 	float getXVal() { return xVal; }
 	float getYVal() { return yVal; }
 	float getZVal() { return zVal; }
@@ -48,18 +51,23 @@ public:
 class Point {
 private:
 	float xVal, yVal, zVal;
+	double depth;
 	Color color;
 
 public:
 	Point(const float x, const float y, const float z);
+	Point(const float x, const float y, const float z, const double d);
 	Point(const float r, const float g, const float b, const float x, const float y, const float z);
 	void setXVal(const float x) { xVal = x; }
 	void setYVal(const float y) { yVal = y; }
 	void setZVal(const float z) { zVal = z; }
+	void setDepth(const double d) { depth = d; }
 	void setColor(const Color& c) { color = c; }
+
 	float getXVal() { return xVal; }
 	float getYVal() { return yVal; }
 	float getZVal() { return zVal; }
+	double getDepth() { return depth; }
 	Color getColor() { return color; }
 };
 
@@ -72,6 +80,7 @@ public:
 	void setXVal(const float x) { xVal = x; }
 	void setYVal(const float y) { yVal = y; }
 	void setZVal(const float z) { zVal = z; }
+
 	float getXVal() { return xVal; }
 	float getYVal() { return yVal; }
 	float getZVal() { return zVal; }
@@ -82,6 +91,7 @@ public:
 class Line {
 private:
 	float xStart, yStart, xEnd, yEnd, slope;
+	double depthStart, depthEnd;
 	bool vertical;
 
 	void setSlope() {
@@ -92,19 +102,24 @@ private:
 	}
 
 public:
-	Line(const float x1, const float y1, const float x2, const float y2);
+	Line(const float x1, const float y1, const double d1, const float x2, const float y2, const double d2);
 	void setXStart(const float x1) { xStart = x1, setSlope(); }
 	void setYStart(const float y1) { yStart = y1, setSlope(); }
+	void setDepthStart(const double d1) { depthStart = d1; }
 	void setXEnd(const float x2) { xEnd = x2, setSlope(); }
 	void setYEnd(const float y2) { yEnd = y2, setSlope(); }
+	void setDepthEnd(const double d2) { yStart = d2; }
+
 	float getXStart() { return xStart; }
 	float getYStart() { return yStart; }
+	double getDepthStart() { return depthStart; }
 	float getXEnd() { return xEnd; }
 	float getYEnd() { return yEnd; }
+	double getDepthEnd() { return depthEnd; }
 	float getSlope() { return slope; }
 	bool isVertical() { return vertical; }
 
-	void drawLine(vector<Point>& pointList);
+	void drawLine(vector<Point>& drawList);
 };
 
 class ASC {
@@ -112,6 +127,7 @@ private:
 	float ksVal, kdVal, nVal;
 	Color color;
 	vector<vector<float>> ascMatrix;
+	vector<vector<float>> worldMatrix;
 	vector<Point> ascVertices;
 	vector<vector<int>> ascSurfaces;
 
@@ -128,6 +144,8 @@ public:
 	void setNVal(const float n) { nVal = n; }
 	void setColor(const Color& c) { color = c; }
 	void setMatrix(const vector<vector<float>>& matrix) { ascMatrix = matrix; }
+	void setWorldMatrix() { worldMatrix = ascMatrix; }
+	
 	float getKdVal() { return kdVal; }
 	float getKsVal() { return ksVal; }
 	float getNVal() { return nVal; }
@@ -135,8 +153,10 @@ public:
 	vector<vector<float>> getMatrix() { return ascMatrix; }
 	vector<Point> getVertices() { return ascVertices; }
 	vector<vector<int>> getSurfaces() { return ascSurfaces; }
+	vector<vector<float>> getWorldMatrix() { return worldMatrix; }
 
 	void addVertices(const Point& p);
 	void addSurface(const vector<int>& vertices);
 	void reserveVector(const int vertexAmount, const int surfaceAmount);
+	void resetMatrix() { ascMatrix = worldMatrix; }
 };

@@ -10,6 +10,9 @@ inline SpaceVector crossProduct(SpaceVector& u, SpaceVector& v) {
 					   u.getZVal() * v.getXVal() - u.getXVal() * v.getZVal(),
 					   u.getXVal() * v.getYVal() - u.getYVal() * v.getXVal());
 }
+inline float dotProduct(SpaceVector& u, SpaceVector& v) {
+	return u.getXVal() * v.getXVal() + u.getYVal() * v.getYVal() + u.getZVal() * v.getZVal();
+}
 
 //global variables
 ifstream file;
@@ -24,8 +27,8 @@ Color* ambient = nullptr;
 Color* background = nullptr;
 vector<Light> lights;
 
-Point* eyePosition;
-Point* COIPosition;	//center of interest
+Point* eyePosition = nullptr;
+Point* COIPosition = nullptr;	//center of interest
 
 vector<ASC> ascList;
 
@@ -43,6 +46,7 @@ vector<vector<float>> eyePositionM;
 vector<vector<float>> PM = { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
 
 vector<Point> backgroundPoints;
+vector<Point> objectPoints;
 
 void initial() {
 	glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -55,8 +59,12 @@ void display() {
 	//draw background
 	if (background) {
 		glColor3f(background->getRed(), background->getGreen(), background->getBlue());
-		for (float i = 0; i < backgroundPoints.size(); i++)
+		for (int i = 0; i < backgroundPoints.size(); i++)
 			glVertex3f(backgroundPoints[i].getXVal(), backgroundPoints[i].getYVal(), 1.0f);
+	}
+	glColor3f(1.0, 1.0, 1.0);
+	for (int i = 0; i < objectPoints.size();i++) {
+		glVertex3f(objectPoints[i].getXVal(), objectPoints[i].getYVal(), 1.0f);
 	}
 	glEnd();
 	glutSwapBuffers();
@@ -65,7 +73,7 @@ void display() {
 void doIdle() {
 	string command = "";
 	while (reading && getline(file, command)) {
-		if (command[0] != '#') {	//not comment
+		if (command[0] != '#') {	// command is not comment
 			// read instruction
 			string instruction = "";
 			int pos = command.find(" ");
@@ -166,6 +174,7 @@ void doIdle() {
 				xRatio = (viewportVertex[1] - viewportVertex[0]) / 2;
 				yRatio = (viewportVertex[3] - viewportVertex[2]) / 2;
 				//push points
+				backgroundPoints.clear();
 				backgroundPoints.reserve((viewportVertex[1] - viewportVertex[0] + 1) * (viewportVertex[3] - viewportVertex[2] + 1));
 				for (int i = viewportVertex[0]; i <= viewportVertex[1]; i++)
 					for (int j = viewportVertex[2]; j <= viewportVertex[3]; j++)
@@ -203,6 +212,7 @@ void doIdle() {
 
 				// TM x ascMatrix
 				ascList.back().setMatrix(matrixMultiplication(TM, ascList.back().getMatrix()));
+				ascList.back().setWorldMatrix();	//backup matrix after transformation
 
 				//read surfaces
 				vector <int> surface;
@@ -218,6 +228,170 @@ void doIdle() {
 				}
 			}
 			else if (instruction == "display") {
+				objectPoints.clear();
+				//  matrix calculation
+				for (int i = 0; i < ascList.size(); i++) {	//asc amount
+					ascList[i].resetMatrix();		// reset to world space
+					ascList[i].setMatrix(matrixMultiplication(EM, ascList[i].getMatrix()));
+					ascList[i].setMatrix(matrixMultiplication(PM, ascList[i].getMatrix()));
+
+					for (int j = 0; j < ascList[i].getSurfaces().size(); j++) { //asc's surface amount
+						// get surface normal vector, (third - second) cross (first - second)
+						SpaceVector surfaceVector1(ascList[i].getWorldMatrix()[0][ascList[i].getSurfaces()[j][2]] - ascList[i].getWorldMatrix()[0][ascList[i].getSurfaces()[j][1]],
+												   ascList[i].getWorldMatrix()[1][ascList[i].getSurfaces()[j][2]] - ascList[i].getWorldMatrix()[1][ascList[i].getSurfaces()[j][1]],
+												   ascList[i].getWorldMatrix()[2][ascList[i].getSurfaces()[j][2]] - ascList[i].getWorldMatrix()[2][ascList[i].getSurfaces()[j][1]]);
+
+						SpaceVector surfaceVector2(ascList[i].getWorldMatrix()[0][ascList[i].getSurfaces()[j][0]] - ascList[i].getWorldMatrix()[0][ascList[i].getSurfaces()[j][1]],
+												   ascList[i].getWorldMatrix()[1][ascList[i].getSurfaces()[j][0]] - ascList[i].getWorldMatrix()[1][ascList[i].getSurfaces()[j][1]],
+												   ascList[i].getWorldMatrix()[2][ascList[i].getSurfaces()[j][0]] - ascList[i].getWorldMatrix()[2][ascList[i].getSurfaces()[j][1]]);
+						//2 cross 1
+						SpaceVector normalVector = crossProduct(surfaceVector2, surfaceVector1);
+						normalVector.normalization();
+
+						//central point of surface
+						float totalX = 0.0f, totalY = 0.0f, totalZ = 0.0f;
+						int vertexAmount = ascList[i].getSurfaces()[j].size();
+						for (int k = 0; k < vertexAmount; k++) {		//surface's vertex amount
+							totalX += ascList[i].getWorldMatrix()[0][ascList[i].getSurfaces()[j][k]];
+							totalY += ascList[i].getWorldMatrix()[1][ascList[i].getSurfaces()[j][k]];
+							totalZ += ascList[i].getWorldMatrix()[2][ascList[i].getSurfaces()[j][k]];
+						}
+						totalX /= vertexAmount;
+						totalY /= vertexAmount;
+						totalZ /= vertexAmount;
+
+						Point central(totalX, totalY, totalZ);
+
+						// lights
+						Color diffuseLight(0, 0, 0);
+						Color specularLight(0, 0, 0);
+						for (int k = 0;  k < lights.size(); k++) {		//lights amount
+							SpaceVector lightVector(lights[k].getXVal() - central.getXVal(),
+													lights[k].getYVal() - central.getYVal(),
+													lights[k].getZVal() - central.getZVal());
+							lightVector.normalization();
+
+							float N_dot_L = dotProduct(lightVector, normalVector);
+							if (N_dot_L >= 0) {
+								diffuseLight.setRed(diffuseLight.getRed() + ascList[i].getKdVal() * lights[k].getColor().getRed() * N_dot_L);
+								diffuseLight.setGreen(diffuseLight.getGreen() + ascList[i].getKdVal() * lights[k].getColor().getGreen() * N_dot_L);
+								diffuseLight.setBlue(diffuseLight.getBlue() + ascList[i].getKdVal() * lights[k].getColor().getBlue() * N_dot_L);
+							}
+							
+							//reflection vector
+							SpaceVector RVector(N_dot_L * normalVector.getXVal() * 2.0f - lightVector.getXVal(),
+												N_dot_L * normalVector.getYVal() * 2.0f - lightVector.getYVal(),
+												N_dot_L * normalVector.getZVal() * 2.0f - lightVector.getZVal());
+							
+							SpaceVector VVector(eyePosition->getXVal() - central.getXVal(),
+												eyePosition->getYVal() - central.getYVal(),
+												eyePosition->getZVal() - central.getZVal());
+							VVector.normalization();
+
+							float cosB = dotProduct(RVector, VVector);
+							if (cosB > 0) {
+								specularLight.setRed(ascList[i].getKsVal() * lights[k].getColor().getRed() * pow(cosB, ascList[i].getNVal()));
+								specularLight.setGreen(ascList[i].getKsVal()* lights[k].getColor().getGreen()* pow(cosB, ascList[i].getNVal()));
+								specularLight.setBlue(ascList[i].getKsVal()* lights[k].getColor().getBlue()* pow(cosB, ascList[i].getNVal()));
+							}
+						}
+
+						// processing plane
+						for (int k = 0; k < ascList[i].getSurfaces()[j].size(); k++) {
+							//check clipping
+							bool clipping = false, trivial = false, reverse = false;
+							float clippingC1 = 0, clippingC2 = 0;
+							int plusMinus = 1, nextK = (k == ascList[i].getSurfaces()[j].size() - 1) ? 0 : k + 1;
+							// 6 equation to determine clipping
+							for (int m = 0; m < 2; m++) {
+								for (int n = 0; n < 3; n++) {
+									//W + X && W - X && W + Y && W - Y  && Z && W-Z
+									if (!trivial) {
+										float C1 = 0.0f, C2 = 0.0f;
+										if (n == 2 && m == 0) {
+											C1 = plusMinus * ascList[i].getMatrix()[n][ascList[i].getSurfaces()[j][k]];
+											C2 = plusMinus * ascList[i].getMatrix()[n][ascList[i].getSurfaces()[j][nextK]];
+										}
+										else {
+											C1 = ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]] +
+												plusMinus * ascList[i].getMatrix()[n][ascList[i].getSurfaces()[j][k]];
+											C2 = ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]] +
+												plusMinus * ascList[i].getMatrix()[n][ascList[i].getSurfaces()[j][nextK]];
+										}
+
+										if (C1 >= 0 && C2 >= 0)
+											continue;
+										else if (C1 < 0 && C2 < 0) {
+											trivial = true;
+											cout << "trivial";
+											break;
+										}
+										else {
+											clippingC1 = C1;
+											clippingC2 = C2;
+											if (C2 >= 0)
+												reverse = true;
+											clipping = true;
+										}
+									}
+								}
+								plusMinus = -1;
+							}
+
+							if (!trivial) {
+								double pointDepth1 = 0;
+								double pointDepth2 = 0;
+								if (clipping) {
+									float coeff = clippingC1 / (clippingC1 - clippingC2);
+									float clippingX = ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][k]] +
+										coeff * (ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][nextK]] - ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][k]]);
+									float clippingY = ascList[i].getMatrix()[1][ascList[i].getSurfaces()[j][k]] +
+										coeff * (ascList[i].getMatrix()[1][ascList[i].getSurfaces()[j][nextK]] - ascList[i].getMatrix()[1][ascList[i].getSurfaces()[j][k]]);
+									float	clippingZ = ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][k]] +
+										coeff * (ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][nextK]] - ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][k]]);
+									float	clippingW = ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]] +
+										coeff * (ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]] - ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]]);
+									//perspective divide
+									clippingX /= clippingW;
+									clippingY /= clippingW;
+
+									//C2 >= 0
+									if (reverse) {
+										Line addLine((clippingX + 1) * xRatio + viewportVertex[0],
+													 (clippingY + 1) * yRatio + viewportVertex[2],
+													 static_cast<double>(clippingZ) / static_cast<double>(clippingW),
+													 (ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][nextK]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]] + 1) * xRatio + viewportVertex[0],
+													 (ascList[i].getMatrix()[1][ascList[i].getSurfaces()[j][nextK]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]] + 1) * yRatio + viewportVertex[2],
+													 static_cast<double>(ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][nextK]]) / static_cast<double>(ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]]));
+										addLine.drawLine(objectPoints);
+									}
+									//C1 >= 0
+									else {
+										Line addLine((ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][k]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]] + 1)* xRatio + viewportVertex[0],
+													 (ascList[i].getMatrix()[1][ascList[i].getSurfaces()[j][k]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]] + 1)* yRatio + viewportVertex[2],
+													 static_cast<double>(ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][k]]) / static_cast<double>(ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]]),
+													 (clippingX + 1)* xRatio + viewportVertex[0],
+													 (clippingY + 1)* yRatio + viewportVertex[2],
+													 static_cast<double>(clippingZ) / static_cast<double>(clippingW));
+										addLine.drawLine(objectPoints);
+									}
+								}
+								else {	//no clipping
+									Line addLine((ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][k]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]] + 1)* xRatio + viewportVertex[0],
+												 (ascList[i].getMatrix()[1][ascList[i].getSurfaces()[j][k]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]] + 1)* yRatio + viewportVertex[2],
+												 static_cast<double>(ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][k]]) / static_cast<double>(ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]]),
+												 (ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][nextK]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]] + 1)* xRatio + viewportVertex[0],
+												 (ascList[i].getMatrix()[1][ascList[i].getSurfaces()[j][nextK]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]] + 1)* yRatio + viewportVertex[2],
+												 static_cast<double>(ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][nextK]]) / static_cast<double>(ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]]));
+									addLine.drawLine(objectPoints);
+								}
+							}
+						}
+
+
+					}
+				}
+
 				reading = false;
 			}
 			else if (instruction == "reset") {
@@ -229,7 +403,7 @@ void doIdle() {
 			}
 		}
 	}
-	/* make the screen update */
+	//update screen
 	glutPostRedisplay();
 }
 
