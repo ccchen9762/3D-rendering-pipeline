@@ -17,14 +17,19 @@ ifstream file;
 int windowWidth = 0, windowHeight = 0;
 float xRatio = 0, yRatio = 0;
 
+bool reading = true;
+
+//illumination
 Color* ambient = nullptr;
 Color* background = nullptr;
 vector<Light> lights;
+
 Point* eyePosition;
 Point* COIPosition;	//center of interest
 
-//asc attributes
 vector<ASC> ascList;
+
+vector<float> viewportVertex;
 
 //Transformation Matrix
 vector<vector<float>> TM = { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
@@ -37,13 +42,29 @@ vector<vector<float>> eyePositionM;
 //Perspective Matrix
 vector<vector<float>> PM = { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
 
+vector<Point> backgroundPoints;
+
 void initial() {
 	glClearColor(0.0, 0.0, 0.0, 0.0);
+	gluOrtho2D(-windowWidth / 2, windowWidth / 2, -windowHeight / 2, windowHeight / 2);
 }
 
 void display() {
-	string command="";
-	while (getline(file, command)) {
+	glClear(GL_COLOR_BUFFER_BIT);
+	glBegin(GL_POINTS);
+	//draw background
+	if (background) {
+		glColor3f(background->getRed(), background->getGreen(), background->getBlue());
+		for (float i = 0; i < backgroundPoints.size(); i++)
+			glVertex3f(backgroundPoints[i].getXVal(), backgroundPoints[i].getYVal(), 1.0f);
+	}
+	glEnd();
+	glutSwapBuffers();
+}
+
+void doIdle() {
+	string command = "";
+	while (reading && getline(file, command)) {
 		if (command[0] != '#') {	//not comment
 			// read instruction
 			string instruction = "";
@@ -136,7 +157,7 @@ void display() {
 							{0, 0,  tan(nums[9] * PI), 0} };
 			}
 			else if (instruction == "viewport") {
-				vector<float> viewportVertex = readNumbers(command, pos + 1);
+				viewportVertex = readNumbers(command, pos + 1);
 				PM[1][1] = (viewportVertex[1] - viewportVertex[0]) / (viewportVertex[3] - viewportVertex[2]);
 				viewportVertex[0] *= windowWidth / 2;
 				viewportVertex[1] *= windowWidth / 2;
@@ -144,12 +165,17 @@ void display() {
 				viewportVertex[3] *= windowHeight / 2;
 				xRatio = (viewportVertex[1] - viewportVertex[0]) / 2;
 				yRatio = (viewportVertex[3] - viewportVertex[2]) / 2;
+				//push points
+				backgroundPoints.reserve((viewportVertex[1] - viewportVertex[0] + 1) * (viewportVertex[3] - viewportVertex[2] + 1));
+				for (int i = viewportVertex[0]; i <= viewportVertex[1]; i++)
+					for (int j = viewportVertex[2]; j <= viewportVertex[3]; j++)
+						backgroundPoints.push_back(Point(i, j, 1.0f));
 			}
 			else if (instruction == "object") {
 				//	read file name
 				while (command[pos] == ' ')
 					pos++;
-				string ascName = command.substr(pos, command.find(" ", pos)-pos);
+				string ascName = command.substr(pos, command.find(" ", pos) - pos);
 				pos += ascName.size();
 
 				//	read object color and kd ks N	
@@ -177,7 +203,7 @@ void display() {
 
 				// TM x ascMatrix
 				ascList.back().setMatrix(matrixMultiplication(TM, ascList.back().getMatrix()));
-				
+
 				//read surfaces
 				vector <int> surface;
 				for (int i = 0; i < surfaceAmount; i++) {
@@ -186,16 +212,16 @@ void display() {
 					int vertexes = nums[0];
 					surface.reserve(vertexes);
 					for (int j = 0; j < vertexes; j++)
-						surface.push_back(nums[j+1] - 1);
+						surface.push_back(nums[j + 1] - 1);
 					ascList.back().addSurface(surface);
 					surface.clear();
 				}
 			}
 			else if (instruction == "display") {
-				
+				reading = false;
 			}
 			else if (instruction == "reset") {
-				TM =  { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
+				TM = { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
 			}
 			else if (instruction == "end") {
 				file.close();
@@ -203,13 +229,14 @@ void display() {
 			}
 		}
 	}
-	glutSwapBuffers();
+	/* make the screen update */
+	glutPostRedisplay();
 }
 
 void keyboard(unsigned char key, int x, int y) {
 	switch (key) {
-	case 'r':		//reset
-	case 'R':
+	case ' ':
+		reading = true;
 		break;
 	case 'q':
 		exit(0);
@@ -235,13 +262,14 @@ int main(int argc, char* argv[]) {
 	windowWidth = stoi(command.substr(0, split));
 	windowHeight = stoi(command.substr(split + 1));
 
-	//
+	//settings
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
 	glutInitWindowSize(windowWidth, windowHeight);
 	glutInitWindowPosition(200, 100);
 	glutCreateWindow("CG");
 	glutDisplayFunc(&display);
+	glutIdleFunc(doIdle);
 	glutKeyboardFunc(keyboard);
 	initial();
 	glutMainLoop();
