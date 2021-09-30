@@ -42,3 +42,29 @@ Line::Line(const float x1, const float y1, const float x2, const float y2) {
 void Line::drawLine(vector<Point>& pointList) {
 
 }
+
+ASC::ASC(const float r, const float g, const float b, const float kd, const float ks, const float n) : color(r, g, b) {
+	kdVal = kd, ksVal = ks, nVal = n;
+	ascMatrix = { { }, { }, { }, { } };
+	ascVertices = {};
+	ascSurfaces = {};
+}
+
+void ASC::addVertices(const Point& p) {
+	ascVertices.push_back(p);
+	addMatrix();
+}
+
+void ASC::addSurface(const vector<int>& vertices) {
+	ascSurfaces.push_back(vertices);
+}
+
+void ASC::reserveVector(const int vertexAmount, const int surfaceAmount) {
+	ascMatrix[0].reserve(vertexAmount);
+	ascMatrix[1].reserve(vertexAmount);
+	ascMatrix[2].reserve(vertexAmount);
+	ascMatrix[3].reserve(vertexAmount);
+	ascVertices.reserve(vertexAmount);
+	ascSurfaces.reserve(surfaceAmount);
+}
+

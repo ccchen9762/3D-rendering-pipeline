@@ -107,3 +107,36 @@ public:
 	void drawLine(vector<Point>& pointList);
 };
 
+class ASC {
+private:
+	float ksVal, kdVal, nVal;
+	Color color;
+	vector<vector<float>> ascMatrix;
+	vector<Point> ascVertices;
+	vector<vector<int>> ascSurfaces;
+
+	void addMatrix() { 
+		ascMatrix[0].push_back(ascVertices.back().getXVal());
+		ascMatrix[1].push_back(ascVertices.back().getYVal());
+		ascMatrix[2].push_back(ascVertices.back().getZVal());
+		ascMatrix[3].push_back(1);
+	}
+public:
+	ASC(const float r, const float g, const float b, const float kd, const float ks, const float n);
+	void setKdVal(const float kd) { kdVal = kd; }
+	void setKsVal(const float ks) { ksVal = ks; }
+	void setNVal(const float n) { nVal = n; }
+	void setColor(const Color& c) { color = c; }
+	void setMatrix(const vector<vector<float>>& matrix) { ascMatrix = matrix; }
+	float getKdVal() { return kdVal; }
+	float getKsVal() { return ksVal; }
+	float getNVal() { return nVal; }
+	Color getColor() { return color; }
+	vector<vector<float>> getMatrix() { return ascMatrix; }
+	vector<Point> getVertices() { return ascVertices; }
+	vector<vector<int>> getSurfaces() { return ascSurfaces; }
+
+	void addVertices(const Point& p);
+	void addSurface(const vector<int>& vertices);
+	void reserveVector(const int vertexAmount, const int surfaceAmount);
+};

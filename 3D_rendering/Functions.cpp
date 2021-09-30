@@ -1,6 +1,26 @@
 #include "Primitive.h"
 
-vector<vector<float>> matrixMultiplication(vector<vector<float>>& matrixA, vector<vector<float>>& matrixB) {
+vector<float> readNumbers(const string& command, int now) {
+	vector<float> nums;
+	nums.reserve(10);
+	while (now<command.size()) {
+		while (now < command.size() && (!isdigit(command[now]) && command[now] != '.' && command[now] != '-'))
+			now++;
+		int pos = command.find(" ", now);
+		if (pos == std::string::npos) {
+			nums.push_back(stof(command.substr(now)));
+			break;
+		}
+		else {
+			nums.push_back(stof(command.substr(now, pos)));
+			now = pos+1;
+		}
+	}
+
+	return nums;
+}
+
+vector<vector<float>> matrixMultiplication(const vector<vector<float>>& matrixA, const vector<vector<float>>& matrixB) {
 	if (matrixA[0].size() != matrixB.size()) {
 		cout << "matrices size not match" << endl;
 		return {};
@@ -16,21 +36,4 @@ vector<vector<float>> matrixMultiplication(vector<vector<float>>& matrixA, vecto
 	}
 
 	return resultMatrix;
-}
-
-vector<float> readNumbers(string command, int now) {
-	vector<float> nums;
-	nums.reserve(10);
-	while (now<command.size()) {
-		int pos = command.find(" ", now+1);
-		if (pos == std::string::npos) {
-			nums.push_back(stof(command.substr(now)));
-			break;
-		}
-		else {
-			nums.push_back(stof(command.substr(now, pos)));
-			now = pos+1;
-		}
-	}
-	return nums;
 }

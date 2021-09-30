@@ -3,8 +3,8 @@
 const float PI = 3.1415926f / 180.0f;
 
 //functions declaration 
-vector<float> readNumbers(string command, int now);
-vector<vector<float>> matrixMultiplication(vector<vector<float>>& matrixA, vector<vector<float>>& matrixB);
+vector<float> readNumbers(const string& command, int now);
+vector<vector<float>> matrixMultiplication(const vector<vector<float>>& matrixA, const vector<vector<float>>& matrixB);
 inline SpaceVector crossProduct(SpaceVector& u, SpaceVector& v) {
 	return SpaceVector(u.getYVal() * v.getZVal() - u.getZVal() * v.getYVal(),
 					   u.getZVal() * v.getXVal() - u.getXVal() * v.getZVal(),
@@ -23,6 +23,9 @@ vector<Light> lights;
 Point* eyePosition;
 Point* COIPosition;	//center of interest
 
+//asc attributes
+vector<ASC> ascList;
+
 //Transformation Matrix
 vector<vector<float>> TM = { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
 //Eye Matrix
@@ -39,11 +42,10 @@ void initial() {
 }
 
 void display() {
-	string command;
-	int counting = 0;
+	string command="";
 	while (getline(file, command)) {
 		if (command[0] != '#') {	//not comment
-			//read instruction
+			// read instruction
 			string instruction = "";
 			int pos = command.find(" ");
 			if (pos == std::string::npos)
@@ -51,7 +53,7 @@ void display() {
 			else
 				instruction = command.substr(0, pos);
 			cout << instruction << endl;
-			//execute by instruction
+			// execute by instruction
 			if (instruction == "ambient") {
 				vector<float> nums = readNumbers(command, pos + 1);
 				ambient = new Color(nums[0], nums[1], nums[2]);
@@ -100,8 +102,6 @@ void display() {
 				vector<vector<float>> translateMatrix = { { 1, 0, 0, nums[0] }, { 0, 1, 0, nums[1] }, { 0, 0, 1, nums[2] }, { 0, 0, 0, 1 } };
 				TM = matrixMultiplication(translateMatrix, TM);
 			}
-			else if (instruction == "object") {
-			}
 			else if (instruction == "observer") {
 				vector<float> nums = readNumbers(command, pos + 1);
 				eyePosition = new Point(nums[0], nums[1], nums[2]);
@@ -113,7 +113,7 @@ void display() {
 											{ 0, 0, 0, 1 } };
 				float total = 0;
 				SpaceVector vector3(nums[3] - nums[0], nums[4] - nums[1], nums[5] - nums[2]);
-				SpaceVector vector1(vector3.getZVal(), 0, (-1)*vector3.getXVal());
+				SpaceVector vector1(vector3.getZVal(), 0, (-1) * vector3.getXVal());
 				SpaceVector vector2 = crossProduct(vector3, vector1);
 				vector3.normalization();
 				vector1.normalization();
@@ -145,7 +145,54 @@ void display() {
 				xRatio = (viewportVertex[1] - viewportVertex[0]) / 2;
 				yRatio = (viewportVertex[3] - viewportVertex[2]) / 2;
 			}
+			else if (instruction == "object") {
+				//	read file name
+				while (command[pos] == ' ')
+					pos++;
+				string ascName = command.substr(pos, command.find(" ", pos)-pos);
+				pos += ascName.size();
+
+				//	read object color and kd ks N	
+				vector<float> nums = readNumbers(command, pos + 1);
+				ascList.push_back(ASC(nums[0], nums[1], nums[2], nums[3], nums[4], nums[5]));
+
+				//open asc file and read vertex and plane amount
+				ifstream ascFile(ascName);
+				int vertexAmount = 0;
+				int surfaceAmount = 0;
+				do {
+					getline(ascFile, command);
+				} while (command[0] == '\0');
+				nums = readNumbers(command, 0);
+				vertexAmount = nums[0];
+				surfaceAmount = nums[1];
+				ascList.back().reserveVector(vertexAmount, surfaceAmount);
+
+				//read Vertices
+				for (int i = 0; i < vertexAmount; i++) {
+					getline(ascFile, command);
+					vector<float> nums = readNumbers(command, 0);
+					ascList.back().addVertices(Point(nums[0], nums[1], nums[2]));
+				}
+
+				// TM x ascMatrix
+				ascList.back().setMatrix(matrixMultiplication(TM, ascList.back().getMatrix()));
+				
+				//read surfaces
+				vector <int> surface;
+				for (int i = 0; i < surfaceAmount; i++) {
+					getline(ascFile, command);
+					vector<float> nums = readNumbers(command, 0);
+					int vertexes = nums[0];
+					surface.reserve(vertexes);
+					for (int j = 0; j < vertexes; j++)
+						surface.push_back(nums[j+1] - 1);
+					ascList.back().addSurface(surface);
+					surface.clear();
+				}
+			}
 			else if (instruction == "display") {
+				
 			}
 			else if (instruction == "reset") {
 				TM =  { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
