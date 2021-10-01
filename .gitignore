@@ -363,3 +363,7 @@ MigrationBackup/
 FodyWeavers.xsd
 
 test.in
+
+*.png
+
+missing.txt

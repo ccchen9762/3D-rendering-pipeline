@@ -71,8 +71,7 @@ void Line::drawLine(vector<Point2D>& drawList) {
 			swap(yStart, yEnd);
 			swap(depthStart, depthEnd);
 		}
-		//for (float plotY = yStart; plotY <= yEnd; plotY++)
-		for (int plotY = trunc(yStart); plotY <= trunc(yEnd); plotY++)
+		for (int plotY = roundf(yStart); plotY <= roundf(yEnd); plotY++)
 			drawList.push_back(Point2D(xStart,
 									 plotY,
 									 (depthEnd - depthStart) * (static_cast<double>(plotY) - static_cast<double>(yStart)) / (static_cast<double>(yEnd) - static_cast<double>(yStart)) + depthStart));
@@ -103,11 +102,11 @@ void Line::drawLine(vector<Point2D>& drawList) {
 			swap(depthStart, depthEnd);
 		}
 
-		int constA = trunc(yEnd) - trunc(yStart);
-		int constB = trunc(xStart) - trunc(xEnd);
+		int constA = roundf(yEnd) - roundf(yStart);
+		int constB = roundf(xStart) - roundf(xEnd);
 		int dVal = 2 * constA + constB;
-		int plotY = trunc(yStart);
-		for (int plotX = trunc(xStart); plotX <= trunc(xEnd); plotX++) {
+		int plotY = roundf(yStart);
+		for (int plotX = roundf(xStart); plotX <= roundf(xEnd); plotX++) {
 			if (dVal <= 0)
 				dVal += 2 * constA;
 			else {

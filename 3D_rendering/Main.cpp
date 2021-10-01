@@ -5,12 +5,14 @@ const float PI = 3.1415926f / 180.0f;
 //functions declaration 
 vector<float> readNumbers(const string& command, int now);
 vector<vector<float>> matrixMultiplication(const vector<vector<float>>& matrixA, const vector<vector<float>>& matrixB);
+
 inline SpaceVector crossProduct(SpaceVector& u, SpaceVector& v) {
 	return SpaceVector(u.getYVal() * v.getZVal() - u.getZVal() * v.getYVal(),
 					   u.getZVal() * v.getXVal() - u.getXVal() * v.getZVal(),
 					   u.getXVal() * v.getYVal() - u.getYVal() * v.getXVal());
 }
 inline float dotProduct(SpaceVector& u, SpaceVector& v) { return u.getXVal() * v.getXVal() + u.getYVal() * v.getYVal() + u.getZVal() * v.getZVal(); }
+
 inline bool sortPointsY(Point2D& p1, Point2D& p2) { return p1.getYVal() > p2.getYVal(); }
 inline bool sortPointsX(Point2D& p1, Point2D& p2) { return p1.getXVal() > p2.getXVal(); }
 inline bool sortPointsDepth(Point2D& p1, Point2D& p2) { return p1.getDepth() > p2.getDepth(); }
