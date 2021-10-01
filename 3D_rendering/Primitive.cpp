@@ -8,29 +8,29 @@ Color::Color(const float r, const float g, const float b) {
 	red = r, green = g, blue = b;
 }
 
-void Point::colorThreshold() {
+Light::Light(const float r, const float g, const float b, const float x, const float y, const float z) : color(r, g, b) {
+	xVal = x, yVal = y, zVal = z;
+}
+
+Point::Point(const float x, const float y, const float z) : color() {
+	xVal = x, yVal = y, zVal = z;
+}
+
+Point::Point(const float r, const float g, const float b, const float x, const float y, const float z) : color(r, g, b) {
+	xVal = x, yVal = y, zVal = z;
+}
+
+Point2D::Point2D(const int x, const int y, const double d) : color() {
+	xVal = x, yVal = y, depth = d;
+}
+
+void Point2D::colorThreshold() {
 	if (color.getRed() > 1.0f)
 		color.setRed(1.0f);
 	if (color.getGreen() > 1.0f)
 		color.setGreen(1.0f);
 	if (color.getBlue() > 1.0f)
 		color.setBlue(1.0f);
-}
-
-Light::Light(const float r, const float g, const float b, const float x, const float y, const float z) : color(r, g, b) {
-	xVal = x, yVal = y, zVal = z;
-}
-
-Point::Point(const float x, const float y, const float z) : color() {
-	xVal = x, yVal = y, zVal = z, depth=0;
-}
-
-Point::Point(const float x, const float y, const float z, const double d) : color() {
-	xVal = x, yVal = y, zVal = z, depth = d;
-}
-
-Point::Point(const float r, const float g, const float b, const float x, const float y, const float z) : color(r, g, b) {
-	xVal = x, yVal = y, zVal = z, depth=0;
 }
 
 SpaceVector::SpaceVector(const float x, const float y, const float z) {
@@ -52,17 +52,29 @@ Line::Line(const float x1, const float y1, const double d1, const float x2, cons
 		slope = (yEnd - yStart) / (xEnd - xStart);
 }
 
-void Line::drawLine(vector<Point>& drawList) {
+void Line::setSlope() {
+	if (xStart == xEnd)
+		vertical = true;
+	else
+		slope = (yEnd - yStart) / (xEnd - xStart);
+}
+
+void Line::swapPoints() {
+	swap(xStart, xEnd);
+	swap(yStart, yEnd);
+	swap(depthStart, depthEnd);
+}
+
+void Line::drawLine(vector<Point2D>& drawList) {
 	if (vertical) {
 		if (yStart > yEnd) {
 			swap(yStart, yEnd);
 			swap(depthStart, depthEnd);
 		}
 		//for (float plotY = yStart; plotY <= yEnd; plotY++)
-		for (int plotY = round(yStart); plotY <= round(yEnd); plotY++)
-			drawList.push_back(Point(xStart,
+		for (int plotY = trunc(yStart); plotY <= trunc(yEnd); plotY++)
+			drawList.push_back(Point2D(xStart,
 									 plotY,
-									 0.0f,
 									 (depthEnd - depthStart) * (static_cast<double>(plotY) - static_cast<double>(yStart)) / (static_cast<double>(yEnd) - static_cast<double>(yStart)) + depthStart));
 	}
 	else {
@@ -91,35 +103,27 @@ void Line::drawLine(vector<Point>& drawList) {
 			swap(depthStart, depthEnd);
 		}
 
-		float constA = yEnd - yStart;
-		float constB = xStart - xEnd;
-		float dVal = 2 * constA + constB;
-		//float plotY = yStart;
-		//for (float plotX = xStart; plotX <= xEnd; plotX++) {
-		int plotY = round(yStart);
-		for (int plotX = round(xStart); plotX <= round(xEnd); plotX++) {
+		int constA = trunc(yEnd) - trunc(yStart);
+		int constB = trunc(xStart) - trunc(xEnd);
+		int dVal = 2 * constA + constB;
+		int plotY = trunc(yStart);
+		for (int plotX = trunc(xStart); plotX <= trunc(xEnd); plotX++) {
 			if (dVal <= 0)
 				dVal += 2 * constA;
 			else {
 				plotY += 1;
 				dVal += 2 * (constA + constB);
 			}
-			//draw the line based on input slope
+			//draw lines based on slope
 			double coeff = (static_cast<double>(plotX) - static_cast<double>(xStart)) / (static_cast<double>(xEnd) - static_cast<double>(xStart));
-			switch (slopeState) {
-			case 0:
-				drawList.push_back(Point(plotX, plotY, 0.0f, (depthEnd - depthStart) * coeff + depthStart));
-				break;
-			case 1:
-				drawList.push_back(Point(plotX * (-1), plotY, 0.0f, (depthEnd - depthStart) * coeff + depthStart));
-				break;
-			case 2:
-				drawList.push_back(Point(plotY, plotX, 0.0f, (depthEnd - depthStart) * coeff + depthStart));
-				break;
-			case 3:
-				drawList.push_back(Point(plotY * (-1), plotX, 0.0f, (depthEnd - depthStart) * coeff + depthStart));
-				break;
-			}
+			if(slopeState==0)
+				drawList.push_back(Point2D(plotX, plotY, (depthEnd - depthStart) * coeff + depthStart));
+			else if(slopeState==1)
+				drawList.push_back(Point2D(plotX * (-1), plotY, (depthEnd - depthStart) * coeff + depthStart));
+			else if(slopeState==2)
+				drawList.push_back(Point2D(plotY, plotX, (depthEnd - depthStart) * coeff + depthStart));
+			else
+				drawList.push_back(Point2D(plotY * (-1), plotX, (depthEnd - depthStart) * coeff + depthStart));
 		}
 	}
 }
@@ -129,6 +133,13 @@ ASC::ASC(const float r, const float g, const float b, const float kd, const floa
 	ascMatrix = { { }, { }, { }, { } };
 	ascVertices = {};
 	ascSurfaces = {};
+}
+
+void ASC::addMatrix() {
+	ascMatrix[0].push_back(ascVertices.back().getXVal());
+	ascMatrix[1].push_back(ascVertices.back().getYVal());
+	ascMatrix[2].push_back(ascVertices.back().getZVal());
+	ascMatrix[3].push_back(1);
 }
 
 void ASC::addVertices(const Point& p) {

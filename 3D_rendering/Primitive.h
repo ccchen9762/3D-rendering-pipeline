@@ -52,22 +52,37 @@ public:
 class Point {
 private:
 	float xVal, yVal, zVal;
-	double depth;
 	Color color;
 
 public:
 	Point(const float x, const float y, const float z);
-	Point(const float x, const float y, const float z, const double d);
 	Point(const float r, const float g, const float b, const float x, const float y, const float z);
 	void setXVal(const float x) { xVal = x; }
 	void setYVal(const float y) { yVal = y; }
 	void setZVal(const float z) { zVal = z; }
-	void setDepth(const double d) { depth = d; }
 	void setColor(const Color& c) { color = c; }
 
 	float getXVal() { return xVal; }
 	float getYVal() { return yVal; }
 	float getZVal() { return zVal; }
+	Color getColor() { return color; }
+};
+
+class Point2D {
+private:
+	int xVal, yVal;
+	double depth;
+	Color color;
+
+public:
+	Point2D(const int x, const int y, const double d);
+	void setXVal(const int x) { xVal = x; }
+	void setYVal(const int y) { yVal = y; }
+	void setDepth(const double d) { depth = d; }
+	void setColor(const Color& c) { color = c; }
+
+	int getXVal() { return xVal; }
+	int getYVal() { return yVal; }
 	double getDepth() { return depth; }
 	Color getColor() { return color; }
 
@@ -97,13 +112,7 @@ private:
 	double depthStart, depthEnd;
 	bool vertical;
 
-	void setSlope() {
-		if (xStart == xEnd)
-			vertical = true;
-		else
-			slope = (yEnd - yStart) / (xEnd - xStart);
-	}
-
+	void setSlope();
 public:
 	Line(const float x1, const float y1, const double d1, const float x2, const float y2, const double d2);
 	void setXStart(const float x1) { xStart = x1, setSlope(); }
@@ -122,7 +131,8 @@ public:
 	float getSlope() { return slope; }
 	bool isVertical() { return vertical; }
 
-	void drawLine(vector<Point>& drawList);
+	void swapPoints();
+	void drawLine(vector<Point2D>& drawList);
 };
 
 class ASC {
@@ -134,12 +144,7 @@ private:
 	vector<Point> ascVertices;
 	vector<vector<int>> ascSurfaces;
 
-	void addMatrix() { 
-		ascMatrix[0].push_back(ascVertices.back().getXVal());
-		ascMatrix[1].push_back(ascVertices.back().getYVal());
-		ascMatrix[2].push_back(ascVertices.back().getZVal());
-		ascMatrix[3].push_back(1);
-	}
+	void addMatrix();
 public:
 	ASC(const float r, const float g, const float b, const float kd, const float ks, const float n);
 	void setKdVal(const float kd) { kdVal = kd; }

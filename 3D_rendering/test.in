@@ -1,49 +1,36 @@
-300 300
+500 500
 
-ambient 0.4 .4 .4
+ambient 0.4 0.4 0.4
 viewport -1 1 -1 1
-background 0.5 0.5 0.0
-
-observer 0.0 0.0 2 0 0 0 0 .1 1000 40
-
-light 1 0.8 .8 .8 0.0 5.0 5.0
-
-
-# SKULL
+scale 5.0 0.25 0.25
+object cube.asc 0.0 1.0 0.0 0.8  0.2  1
 
 reset
-object skull.asc 1.0 0.0 0.0 0.7  0.3  5
+scale 0.25 5.0 0.25
+object cube.asc 0.0 1.0 0.0 0.8  0.2  1
+
+reset
+scale 0.25 0.25 5.0 
+object cube.asc 0.0 1.0 0.0 0.8  0.2  1
+
+reset
+rotate 180.0 0.0 0.0
+translate -1.0 0.0 -1.0
+object Grid4x4.asc 1.0 0.0 0.0 0.8  0.2  1
+
+translate 2.0 0.0 0.0
+object Grid4x4.asc 1.0 0.0 0.0 0.8  0.2  1
+
+translate 0.0 0.0 2.0
+object Grid4x4.asc 1.0 0.0 0.0 0.8  0.2  1
+
+translate -2.0 0.0 0.0
+object Grid4x4.asc 1.0 0.0 0.0 0.8  0.2  1
+
+observer 10.0 10.0 10.0 0.0 0.0 0.0 0 .1 1000 10
+
+light 1 0.8 0.8 .8 0.0 10.0 0.0
 
 display
-
-# EYE BALLS
-
-reset
-scale 0.2 0.2 0.2
-translate 0.26 0.08 .28
-object cube.asc 0.9 0.9 0.9 0.9 0.1 1
-
-reset
-scale 0.2 0.2 0.2
-translate -0.26 0.08 .28
-object cube.asc 1.0 1.0 1.0 0.9 0.1 1
-
-display
-
-# PUPILS
-
-reset
-scale 0.05 0.05 0.05
-translate 0.26 0.08 .46
-object cube.asc 0.5 0.5 0.0 0.7  0.3  5
-
-
-reset
-scale 0.05 0.05 0.05
-translate -0.26 0.08 .46
-object cube.asc 0.5 0.5 0.0 0.7  0.3  5
-
-display
-
 
 end

@@ -10,22 +10,10 @@ inline SpaceVector crossProduct(SpaceVector& u, SpaceVector& v) {
 					   u.getZVal() * v.getXVal() - u.getXVal() * v.getZVal(),
 					   u.getXVal() * v.getYVal() - u.getYVal() * v.getXVal());
 }
-
-inline float dotProduct(SpaceVector& u, SpaceVector& v) {
-	return u.getXVal() * v.getXVal() + u.getYVal() * v.getYVal() + u.getZVal() * v.getZVal();
-}
-
-inline bool sortPointsY(Point& p1, Point& p2) {
-	return p1.getYVal() > p2.getYVal();
-}
-
-inline bool sortPointsX(Point& p1, Point& p2) {
-	return p1.getXVal() > p2.getXVal();
-}
-
-inline bool sortPointsDepth(Point& p1, Point& p2) {
-	return p1.getDepth() > p2.getDepth();
-}
+inline float dotProduct(SpaceVector& u, SpaceVector& v) { return u.getXVal() * v.getXVal() + u.getYVal() * v.getYVal() + u.getZVal() * v.getZVal(); }
+inline bool sortPointsY(Point2D& p1, Point2D& p2) { return p1.getYVal() > p2.getYVal(); }
+inline bool sortPointsX(Point2D& p1, Point2D& p2) { return p1.getXVal() > p2.getXVal(); }
+inline bool sortPointsDepth(Point2D& p1, Point2D& p2) { return p1.getDepth() > p2.getDepth(); }
 
 //global variables
 ifstream file;
@@ -58,9 +46,12 @@ vector<vector<float>> eyePositionM;
 //Perspective Matrix
 vector<vector<float>> PM = { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
 
-vector<Point> backgroundPoints;
-vector<Point> objectPoints;
-vector<Point> surfacePoints;
+vector<Point2D> backgroundPoints;
+vector<Point2D> objectPoints;
+vector<Point2D> surfacePoints;
+
+enum class COLORSTATE { FLAT };
+COLORSTATE g_ColorState = COLORSTATE::FLAT;
 
 void initial() {
 	glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -82,7 +73,7 @@ void display() {
 		glColor3f(objectPoints[i].getColor().getRed(), objectPoints[i].getColor().getGreen(), objectPoints[i].getColor().getBlue());
 		glVertex3f(objectPoints[i].getXVal(), objectPoints[i].getYVal(), 1.0f);
 	}
-		
+
 	glEnd();
 	glutSwapBuffers();
 }
@@ -195,7 +186,7 @@ void doIdle() {
 				backgroundPoints.reserve((viewportVertex[1] - viewportVertex[0] + 1) * (viewportVertex[3] - viewportVertex[2] + 1));
 				for (int i = viewportVertex[0]; i <= viewportVertex[1]; i++)
 					for (int j = viewportVertex[2]; j <= viewportVertex[3]; j++)
-						backgroundPoints.push_back(Point(i, j, 1.0f));
+						backgroundPoints.push_back(Point2D(i, j, 1.0f));
 			}
 			else if (instruction == "object") {
 				//	read file name
@@ -245,17 +236,16 @@ void doIdle() {
 				}
 			}
 			else if (instruction == "display") {
-				objectPoints.clear();
+				objectPoints.clear();		//reset drawing points
 				//  matrix calculation
 				int ascAmount = ascList.size();
 				for (int i = 0; i < ascList.size(); i++) {	//asc amount
 					ascList[i].resetMatrix();		// reset to world space
 					ascList[i].setMatrix(matrixMultiplication(EM, ascList[i].getMatrix()));
 					ascList[i].setMatrix(matrixMultiplication(PM, ascList[i].getMatrix()));
-					
+
 					int surfaceAmount = ascList[i].getSurfaces().size();
 					for (int j = 0; j < surfaceAmount; j++) { //asc's surface amount
-						cout << "here";
 						// get surface normal vector, (third - second) cross (first - second)
 						SpaceVector surfaceVector1(ascList[i].getWorldMatrix()[0][ascList[i].getSurfaces()[j][2]] - ascList[i].getWorldMatrix()[0][ascList[i].getSurfaces()[j][1]],
 												   ascList[i].getWorldMatrix()[1][ascList[i].getSurfaces()[j][2]] - ascList[i].getWorldMatrix()[1][ascList[i].getSurfaces()[j][1]],
@@ -267,7 +257,7 @@ void doIdle() {
 						//2 cross 1
 						SpaceVector normalVector = crossProduct(surfaceVector2, surfaceVector1);
 						normalVector.normalization();
-						
+
 						//central point of surface
 						float totalX = 0.0f, totalY = 0.0f, totalZ = 0.0f;
 						int vertexAmount = ascList[i].getSurfaces()[j].size();
@@ -282,10 +272,10 @@ void doIdle() {
 
 						Point central(totalX, totalY, totalZ);
 
-						// lights
+						// illumination
 						Color diffuseLight(0, 0, 0);
 						Color specularLight(0, 0, 0);
-						for (int k = 0;  k < lights.size(); k++) {		//lights amount
+						for (int k = 0; k < lights.size(); k++) {		//lights amount
 							SpaceVector lightVector(lights[k].getXVal() - central.getXVal(),
 													lights[k].getYVal() - central.getYVal(),
 													lights[k].getZVal() - central.getZVal());
@@ -297,12 +287,12 @@ void doIdle() {
 								diffuseLight.setGreen(diffuseLight.getGreen() + ascList[i].getKdVal() * lights[k].getColor().getGreen() * N_dot_L);
 								diffuseLight.setBlue(diffuseLight.getBlue() + ascList[i].getKdVal() * lights[k].getColor().getBlue() * N_dot_L);
 							}
-							
+
 							//reflection vector
 							SpaceVector RVector(N_dot_L * normalVector.getXVal() * 2.0f - lightVector.getXVal(),
 												N_dot_L * normalVector.getYVal() * 2.0f - lightVector.getYVal(),
 												N_dot_L * normalVector.getZVal() * 2.0f - lightVector.getZVal());
-							
+
 							SpaceVector VVector(eyePosition->getXVal() - central.getXVal(),
 												eyePosition->getYVal() - central.getYVal(),
 												eyePosition->getZVal() - central.getZVal());
@@ -310,21 +300,28 @@ void doIdle() {
 
 							float cosB = dotProduct(RVector, VVector);
 							if (cosB > 0) {
-								specularLight.setRed(ascList[i].getKsVal() * lights[k].getColor().getRed() * pow(cosB, ascList[i].getNVal()));
-								specularLight.setGreen(ascList[i].getKsVal()* lights[k].getColor().getGreen()* pow(cosB, ascList[i].getNVal()));
-								specularLight.setBlue(ascList[i].getKsVal()* lights[k].getColor().getBlue()* pow(cosB, ascList[i].getNVal()));
+								specularLight.setRed(specularLight.getRed() + ascList[i].getKsVal() * lights[k].getColor().getRed() * pow(cosB, ascList[i].getNVal()));
+								specularLight.setGreen(specularLight.getGreen() + ascList[i].getKsVal() * lights[k].getColor().getGreen() * pow(cosB, ascList[i].getNVal()));
+								specularLight.setBlue(specularLight.getBlue() + ascList[i].getKsVal() * lights[k].getColor().getBlue() * pow(cosB, ascList[i].getNVal()));
 							}
 						}
-						
-						// processing plane
+
+						//set depth offeset
 						vertexAmount = ascList[i].getSurfaces()[j].size();
+						double surfaceOffset = 0.0;		//use offset show the forward edge color 
+						for (int k = 0; k < vertexAmount; k++)
+							surfaceOffset += static_cast<double>(ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][k]]) /
+								static_cast<double>(ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]]);
+						surfaceOffset *= 0.0000001/vertexAmount;
+
+						// processing plane
 						for (int k = 0; k < vertexAmount; k++) {
-							//check clipping
+							//check clipping of polygon side
 							bool clipping = false, trivial = false, reverse = false;
 							float clippingC1 = 0, clippingC2 = 0;
 							int plusMinus = 1, nextK = (k == ascList[i].getSurfaces()[j].size() - 1) ? 0 : k + 1;
 							// 6 equation to determine clipping
-							for (int m = 0; m < 2; m++) {
+							/*for (int m = 0; m < 2; m++) {
 								for (int n = 0; n < 3; n++) {
 									//W + X && W - X && W + Y && W - Y  && Z && W-Z
 									if (!trivial) {
@@ -357,11 +354,12 @@ void doIdle() {
 									}
 								}
 								plusMinus = -1;
-							}
+							}*/
 
+							vector<Point2D> clipPoints;
+							static double offset = 0.000000000001;	//prevent same depth sirface fighting edge
+							surfaceOffset += offset;
 							if (!trivial) {
-								double pointDepth1 = 0;
-								double pointDepth2 = 0;
 								if (clipping) {
 									float coeff = clippingC1 / (clippingC1 - clippingC2);
 									float clippingX = ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][k]] +
@@ -376,43 +374,46 @@ void doIdle() {
 									clippingX /= clippingW;
 									clippingY /= clippingW;
 
-									//C2 >= 0
-									if (reverse) {
+									if (reverse) {	//C2 >= 0
 										Line addLine((clippingX + 1) * xRatio + viewportVertex[0],
 													 (clippingY + 1) * yRatio + viewportVertex[2],
-													 static_cast<double>(clippingZ) / static_cast<double>(clippingW),
+													 static_cast<double>(clippingZ) / static_cast<double>(clippingW) + surfaceOffset,
 													 (ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][nextK]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]] + 1) * xRatio + viewportVertex[0],
 													 (ascList[i].getMatrix()[1][ascList[i].getSurfaces()[j][nextK]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]] + 1) * yRatio + viewportVertex[2],
-													 static_cast<double>(ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][nextK]]) / static_cast<double>(ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]]));
+													 static_cast<double>(ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][nextK]]) / static_cast<double>(ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]]) + surfaceOffset);
 										addLine.drawLine(surfacePoints);
+										clipPoints.push_back(Point2D((clippingX + 1) * xRatio + viewportVertex[0],
+																   (clippingY + 1) * yRatio + viewportVertex[2],
+																   static_cast<double>(clippingZ) / static_cast<double>(clippingW)));
 									}
-									//C1 >= 0
-									else {
-										Line addLine((ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][k]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]] + 1)* xRatio + viewportVertex[0],
-													 (ascList[i].getMatrix()[1][ascList[i].getSurfaces()[j][k]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]] + 1)* yRatio + viewportVertex[2],
-													 static_cast<double>(ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][k]]) / static_cast<double>(ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]]),
-													 (clippingX + 1)* xRatio + viewportVertex[0],
-													 (clippingY + 1)* yRatio + viewportVertex[2],
-													 static_cast<double>(clippingZ) / static_cast<double>(clippingW));
+									else {	//C1 >= 0
+										Line addLine((ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][k]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]] + 1) * xRatio + viewportVertex[0],
+													 (ascList[i].getMatrix()[1][ascList[i].getSurfaces()[j][k]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]] + 1) * yRatio + viewportVertex[2],
+													 static_cast<double>(ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][k]]) / static_cast<double>(ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]]) + surfaceOffset,
+													 (clippingX + 1) * xRatio + viewportVertex[0],
+													 (clippingY + 1) * yRatio + viewportVertex[2],
+													 static_cast<double>(clippingZ) / static_cast<double>(clippingW) + surfaceOffset);
 										addLine.drawLine(surfacePoints);
+										clipPoints.push_back(Point2D((clippingX + 1) * xRatio + viewportVertex[0],
+																   (clippingY + 1) * yRatio + viewportVertex[2],
+																   static_cast<double>(clippingZ) / static_cast<double>(clippingW)));
 									}
 								}
 								else {	//no clipping
-									Line addLine((ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][k]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]] + 1)* xRatio + viewportVertex[0],
-												 (ascList[i].getMatrix()[1][ascList[i].getSurfaces()[j][k]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]] + 1)* yRatio + viewportVertex[2],
-												 static_cast<double>(ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][k]]) / static_cast<double>(ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]]),
-												 (ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][nextK]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]] + 1)* xRatio + viewportVertex[0],
-												 (ascList[i].getMatrix()[1][ascList[i].getSurfaces()[j][nextK]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]] + 1)* yRatio + viewportVertex[2],
-												 static_cast<double>(ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][nextK]]) / static_cast<double>(ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]]));
+									Line addLine((ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][k]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]] + 1) * xRatio + viewportVertex[0],
+												 (ascList[i].getMatrix()[1][ascList[i].getSurfaces()[j][k]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]] + 1) * yRatio + viewportVertex[2],
+												 static_cast<double>(ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][k]]) / static_cast<double>(ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][k]]) + surfaceOffset,
+												 (ascList[i].getMatrix()[0][ascList[i].getSurfaces()[j][nextK]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]] + 1) * xRatio + viewportVertex[0],
+												 (ascList[i].getMatrix()[1][ascList[i].getSurfaces()[j][nextK]] / ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]] + 1) * yRatio + viewportVertex[2],
+												 static_cast<double>(ascList[i].getMatrix()[2][ascList[i].getSurfaces()[j][nextK]]) / static_cast<double>(ascList[i].getMatrix()[3][ascList[i].getSurfaces()[j][nextK]]) + surfaceOffset);
 									addLine.drawLine(surfacePoints);
 								}
 							}
+							offset += 0.000000000001;
 						}
-						
 
-						
-						//add viewport lines (clipping surface repair) bad
-						int leftFirst = viewportVertex[3];
+						//add viewport lines (clipping surface repair)
+						/*int leftFirst = viewportVertex[3];
 						int leftSecond = viewportVertex[2];
 						int rightFirst = viewportVertex[3];
 						int rightSecond = viewportVertex[2];
@@ -497,22 +498,23 @@ void doIdle() {
 															  viewportVertex[3],
 															  0.0f,
 															  (depthFirst - depthSecond) * (a - leftFirst) / (leftSecond - leftFirst) + depthSecond));
-						}
+						}*/
 
 						// fill surface
-						sort(surfacePoints.begin(), surfacePoints.end(), sortPointsY);
 						int len = surfacePoints.size();
-						float xLeft = surfacePoints[0].getXVal();
-						float xRight = surfacePoints[0].getXVal();
-						double depthLeft = surfacePoints[0].getDepth();
-						double depthRight = surfacePoints[0].getDepth();
+						if (len == 0)
+							break;
+						sort(surfacePoints.begin(), surfacePoints.end(), sortPointsY);
+						int xLeft = surfacePoints[0].getXVal(), xRight = xLeft;
+						double depthLeft = surfacePoints[0].getDepth(), depthRight = depthLeft;
 						for (int m = 1; m < len; m++) {
 							if (surfacePoints[m].getYVal() != surfacePoints[m - 1].getYVal()) {
-								for (int n = roundf(xLeft) + 1; n < roundf(xRight); n++) {
-									surfacePoints.push_back(Point(n,
-																  roundf(surfacePoints[m - 1].getYVal()),
-																  0.0f,
-																  (depthRight - depthLeft) * (n - xLeft) / (xRight - xLeft) + depthLeft));
+								for (int n = xLeft + 1; n <= xRight; n++) {
+									double ratio = (static_cast<double>(n) - static_cast<double>(xLeft)) /
+										(static_cast<double>(xRight) - static_cast<double>(xLeft));
+									surfacePoints.push_back(Point2D(n,
+																  surfacePoints[m - 1].getYVal(),
+																  (depthRight - depthLeft) * ratio + depthLeft));
 								}
 								xLeft = surfacePoints[m].getXVal();
 								xRight = surfacePoints[m].getXVal();
@@ -530,13 +532,17 @@ void doIdle() {
 								}
 							}
 						}
-						//////////////////////////////   determine color  /////////////////////////////
-						for (float a = 0; a < surfacePoints.size(); a++) {
-							surfacePoints[a].setColor(Color((ambient->getRed() + diffuseLight.getRed()) * ascList[i].getColor().getRed() + specularLight.getRed(),
-															(ambient->getGreen() + diffuseLight.getGreen()) * ascList[i].getColor().getGreen() + specularLight.getGreen(),
-															(ambient->getBlue() + diffuseLight.getBlue()) * ascList[i].getColor().getBlue() + specularLight.getBlue()));
-							surfacePoints[a].colorThreshold();
-							objectPoints.push_back(surfacePoints[a]);
+
+						// determine color
+						if (g_ColorState == COLORSTATE::FLAT) {
+							Color surfaceColor((ambient->getRed() + diffuseLight.getRed()) * ascList[i].getColor().getRed() + specularLight.getRed(),
+											   (ambient->getGreen() + diffuseLight.getGreen()) * ascList[i].getColor().getGreen() + specularLight.getGreen(),
+											   (ambient->getBlue() + diffuseLight.getBlue()) * ascList[i].getColor().getBlue() + specularLight.getBlue());
+							for (int k = 0; k < surfacePoints.size(); k++) {
+								surfacePoints[k].setColor(surfaceColor);
+								surfacePoints[k].colorThreshold();
+								objectPoints.push_back(surfacePoints[k]);
+							}
 						}
 						surfacePoints.clear();
 					}
@@ -559,7 +565,7 @@ void doIdle() {
 
 void keyboard(unsigned char key, int x, int y) {
 	switch (key) {
-	case ' ':
+	case ' ':		//switch reading
 		reading = true;
 		break;
 	case 'q':
